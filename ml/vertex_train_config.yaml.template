@@ -1,0 +1,16 @@
+# Template for the Vertex AI custom-training job spec. Filled in by the deploy
+# script with the resolved trainer image URI.
+workerPoolSpecs:
+  - machineSpec:
+      machineType: n1-standard-4
+      acceleratorType: NVIDIA_TESLA_T4
+      acceleratorCount: 1
+    replicaCount: 1
+    containerSpec:
+      imageUri: __TRAINER_IMAGE__
+      args:
+        - --dataset-root=/gcs/road-damage-datasets/master-hazard
+        - --out=/gcs/looker-vertexai-training-baladiya/models/v1
+        - --epochs=50
+        - --imgsz=640
+        - --batch=16

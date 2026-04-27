@@ -1,0 +1,14 @@
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - --build-arg=VITE_API_URL=${_VITE_API_URL}
+      - -t
+      - us-central1-docker.pkg.dev/looker-vertexai-training/baladiya/frontend:v1
+      - .
+images:
+  - us-central1-docker.pkg.dev/looker-vertexai-training/baladiya/frontend:v1
+options:
+  logging: CLOUD_LOGGING_ONLY
+substitutions:
+  _VITE_API_URL: "https://baladiya-agent-734635782885.us-central1.run.app"

@@ -24,10 +24,9 @@ import logging
 import os
 import re
 import secrets
-import sqlite3
 import time
 import uuid
-from pathlib import Path
+from datetime import datetime, timezone
 from typing import Optional
 
 from dotenv import load_dotenv
@@ -36,11 +35,13 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
+from google.cloud import firestore
 from google.genai import types
 from pydantic import BaseModel, Field
 
 from baladiya_agent.agent import root_agent
 from baladiya_agent.tools import list_tickets
+from server.vision import classify_hazard, format_hint
 
 load_dotenv()
 
@@ -52,32 +53,19 @@ EMAIL_RE = re.compile(r"^[^\s@]+@[^\s@]+\.[^\s@]+$")
 PBKDF2_ITERS = 200_000
 
 _SECRET = os.getenv("BALADIYA_SECRET", "dev-secret-change-me").encode("utf-8")
-_USERS_DB = Path(__file__).resolve().parent.parent / "users.db"
 
 
-# --- User store -------------------------------------------------------------
+# --- User store (Firestore) -------------------------------------------------
 
-def _user_conn() -> sqlite3.Connection:
-    conn = sqlite3.connect(_USERS_DB, check_same_thread=False, isolation_level=None)
-    conn.row_factory = sqlite3.Row
-    return conn
+_fs_client: Optional[firestore.Client] = None
 
 
-def _ensure_users_schema() -> None:
-    with _user_conn() as conn:
-        conn.execute(
-            """
-            CREATE TABLE IF NOT EXISTS users (
-                email         TEXT PRIMARY KEY,
-                password_hash TEXT NOT NULL,
-                salt          TEXT NOT NULL,
-                created_at    TEXT NOT NULL
-            )
-            """
-        )
-
-
-_ensure_users_schema()
+def _users() -> firestore.CollectionReference:
+    global _fs_client
+    if _fs_client is None:
+        project = os.environ.get("GOOGLE_CLOUD_PROJECT") or os.environ.get("VERTEX_PROJECT")
+        _fs_client = firestore.Client(project=project) if project else firestore.Client()
+    return _fs_client.collection("users")
 
 
 def _hash_password(password: str, salt: bytes) -> bytes:
@@ -87,25 +75,27 @@ def _hash_password(password: str, salt: bytes) -> bytes:
 def create_user(email: str, password: str) -> None:
     salt = secrets.token_bytes(16)
     digest = _hash_password(password, salt)
-    with _user_conn() as conn:
-        try:
-            conn.execute(
-                "INSERT INTO users (email, password_hash, salt, created_at) VALUES (?, ?, ?, ?)",
-                (email, digest.hex(), salt.hex(), str(int(time.time()))),
-            )
-        except sqlite3.IntegrityError as exc:
-            raise HTTPException(409, "An account with this email already exists.") from exc
+    doc = _users().document(email)
+    if doc.get().exists:
+        raise HTTPException(409, "An account with this email already exists.")
+    doc.set({
+        "email": email,
+        "password_hash": digest.hex(),
+        "salt": salt.hex(),
+        "created_at": datetime.now(timezone.utc),
+    })
 
 
 def verify_user(email: str, password: str) -> bool:
-    with _user_conn() as conn:
-        row = conn.execute(
-            "SELECT password_hash, salt FROM users WHERE email = ?", (email,)
-        ).fetchone()
-    if not row:
+    snap = _users().document(email).get()
+    if not snap.exists:
         return False
-    expected = bytes.fromhex(row["password_hash"])
-    salt = bytes.fromhex(row["salt"])
+    data = snap.to_dict() or {}
+    try:
+        expected = bytes.fromhex(data["password_hash"])
+        salt = bytes.fromhex(data["salt"])
+    except (KeyError, ValueError):
+        return False
     return hmac.compare_digest(expected, _hash_password(password, salt))
 
 
@@ -296,17 +286,27 @@ async def start_report(
     if len(image_bytes) > 10 * 1024 * 1024:
         raise HTTPException(413, "Image is too large (max 10 MB).")
 
+    # Run YOLOv8 first (if a backend is configured) so the agent gets a strong
+    # classification hint before it looks at the image. Failures are non-fatal.
+    yolo = classify_hazard(image_bytes, image.content_type or "image/jpeg")
+    hint_line = format_hint(yolo)
+
     session_id = uuid.uuid4().hex
     await session_service.create_session(
         app_name=APP_NAME,
         user_id=email,
         session_id=session_id,
-        state={"user_email": email, "gps": {"latitude": latitude, "longitude": longitude}},
+        state={
+            "user_email": email,
+            "gps": {"latitude": latitude, "longitude": longitude},
+            "yolo": yolo,
+        },
     )
 
     intro = (
         f"GPS: {latitude}, {longitude}\n"
         f"Reporter: {email}\n"
+        f"{hint_line}\n"
         "Please analyze the attached photo and proceed with the reporting workflow."
     )
     content = types.Content(

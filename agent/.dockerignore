@@ -1,0 +1,15 @@
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.venv
+.env
+.env.*
+*.db
+*.sqlite
+e2e_screens
+e2e_test.py
+test_pothole.jpg
+README.md
+.dockerignore
+Dockerfile
