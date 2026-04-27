@@ -1,0 +1,38 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+    html, body, #root {
+        height: 100%;
+    }
+    body {
+        font-family: 'Public Sans', system-ui, -apple-system, sans-serif;
+        -webkit-font-smoothing: antialiased;
+    }
+
+    /* Visible keyboard-focus ring for any interactive element that doesn't
+       already define its own focus-visible style. */
+    :focus-visible {
+        outline: 2px solid #6c0028;
+        outline-offset: 2px;
+        border-radius: 4px;
+    }
+    button:focus-visible,
+    a:focus-visible {
+        outline: 2px solid #6c0028;
+        outline-offset: 2px;
+    }
+    /* Hide the default outline only when focus is from a pointer, never from kbd. */
+    :focus:not(:focus-visible) {
+        outline: none;
+    }
+}
+
+.material-symbols-outlined {
+    font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+    user-select: none;
+}
+.icon-fill {
+    font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+}

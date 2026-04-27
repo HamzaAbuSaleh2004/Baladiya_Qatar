@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(/c/Users/hamza/Desktop/LiverX/RFP/.venv/Scripts/python -c ':*)",
+      "Bash(\"/c/Users/hamza/Desktop/LiverX/RFP/.venv/Scripts/python\" -c \"import docx; print\\('python-docx OK'\\)\")",
+      "Bash(pip show:*)",
+      "Bash(.venv/Scripts/python -c \"from rfp_agent.main import app; print\\('Import OK'\\)\")",
+      "Bash(.venv/Scripts/python -c \"from rfp_agent.main import app; print\\('OK'\\)\")",
+      "Read(//c/c/Users/hamza/Desktop/LiverX/RFP/**)",
+      "Bash(start \"\" \"c:\\\\Users\\\\hamza\\\\Desktop\\\\LiverX\\\\RFP\\\\output\\\\test_overlay.pdf\")",
+      "Read(//c/Users/hamza/Desktop/LiverX/RFP/rfp_agent/**)",
+      "Read(//c/Users/hamza/Desktop/LiverX/RFP/**)",
+      "Bash(python -c \"from rfp_agent.i18n import t; print\\(t\\('eval.award_rfp', 'en'\\)\\)\")",
+      "Bash(/c/Users/hamza/AppData/Local/Programs/Python/Python311/python.exe -m pip install playwright -q)",
+      "Bash(curl -s http://localhost:8000/api/stats)"
+    ]
+  }
+}

@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Smart Reporting - Confirmation</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-dim": "#ead5d7",
+                        "surface-tint": "#a93151",
+                        "error": "#ba1a1a",
+                        "secondary-fixed-dim": "#c6c6c7",
+                        "tertiary-container": "#00562e",
+                        "on-secondary": "#ffffff",
+                        "surface-container": "#ffe9eb",
+                        "on-tertiary-fixed": "#00210e",
+                        "tertiary": "#003c1f",
+                        "on-tertiary-container": "#81ca97",
+                        "on-primary-fixed-variant": "#89173a",
+                        "on-error": "#ffffff",
+                        "secondary-container": "#dfe0e0",
+                        "outline": "#8a7174",
+                        "inverse-on-surface": "#ffecee",
+                        "primary": "#6c0028",
+                        "on-primary-fixed": "#400014",
+                        "secondary-fixed": "#e2e2e2",
+                        "error-container": "#ffdad6",
+                        "on-background": "#24191a",
+                        "on-secondary-container": "#616363",
+                        "on-tertiary-fixed-variant": "#00522c",
+                        "primary-fixed": "#ffd9de",
+                        "on-tertiary": "#ffffff",
+                        "surface-variant": "#f3dddf",
+                        "secondary": "#5d5f5f",
+                        "surface": "#fff8f7",
+                        "inverse-surface": "#3a2d2f",
+                        "tertiary-fixed": "#a8f3bd",
+                        "on-surface-variant": "#574144",
+                        "outline-variant": "#ddbfc3",
+                        "on-surface": "#24191a",
+                        "on-primary": "#ffffff",
+                        "primary-fixed-dim": "#ffb2be",
+                        "surface-bright": "#fff8f7",
+                        "on-error-container": "#93000a",
+                        "on-primary-container": "#ff9eaf",
+                        "surface-container-lowest": "#ffffff",
+                        "background": "#fff8f7",
+                        "primary-container": "#8d1b3d",
+                        "surface-container-high": "#f9e3e5",
+                        "on-secondary-fixed-variant": "#454747",
+                        "inverse-primary": "#ffb2be",
+                        "surface-container-low": "#fff0f1",
+                        "surface-container-highest": "#f3dddf",
+                        "on-secondary-fixed": "#1a1c1c",
+                        "tertiary-fixed-dim": "#8dd7a3"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "sm": "8px",
+                        "gutter": "24px",
+                        "lg": "24px",
+                        "margin-mobile": "16px",
+                        "xl": "40px",
+                        "container-max": "1280px",
+                        "unit": "4px",
+                        "xs": "4px",
+                        "md": "16px"
+                    },
+                    "fontFamily": {
+                        "headline-md": ["Public Sans"],
+                        "label-sm": ["Public Sans"],
+                        "headline-xl": ["Public Sans"],
+                        "body-md": ["Public Sans"],
+                        "headline-lg": ["Public Sans"],
+                        "label-bold": ["Public Sans"],
+                        "body-lg": ["Public Sans"]
+                    },
+                    "fontSize": {
+                        "headline-md": ["24px", { "lineHeight": "32px", "fontWeight": "600" }],
+                        "label-sm": ["12px", { "lineHeight": "16px", "fontWeight": "500" }],
+                        "headline-xl": ["40px", { "lineHeight": "48px", "fontWeight": "700" }],
+                        "body-md": ["16px", { "lineHeight": "24px", "fontWeight": "400" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "fontWeight": "700" }],
+                        "label-bold": ["14px", { "lineHeight": "20px", "fontWeight": "600" }],
+                        "body-lg": ["18px", { "lineHeight": "28px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { font-family: 'Public Sans', sans-serif; }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-background min-h-screen flex flex-col antialiased">
+<!-- TopAppBar Shared Component -->
+<header class="bg-white dark:bg-slate-900 border-b border-gray-200 dark:border-gray-800 flex justify-between items-center px-4 h-16 w-full sticky top-0 z-50">
+<div class="flex items-center gap-sm">
+<button class="text-rose-900 dark:text-rose-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200 p-2 rounded-full flex items-center justify-center">
+<span class="material-symbols-outlined" data-icon="menu">menu</span>
+</button>
+<span class="text-xl font-bold text-rose-900 dark:text-rose-100 font-['Public_Sans']">Baladiya</span>
+</div>
+<div class="flex items-center">
+<div class="w-8 h-8 rounded-full overflow-hidden border border-outline-variant">
+<img alt="User profile photo" class="w-full h-full object-cover" data-alt="Close-up portrait of a professional individual facing forward, neutral lighting, solid background." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDxXDww3yAVIsw2kj3s18gD5wRpD28z4DR2ajG9ZMqDj_IrfxgdNvImxONG6s4Ddjd98z9tfMFaTaCTZTN0lsdZT-qCLYvHr7w3VNRFW1sfcvSRviM5rqGZpw6tSgLmIu_8e4EnBOI83k4OSl9PoGVWrJo5NVTfeFGxlTlvmWaaOhJz5FMxLe_i-ri7uNbwgKlv43ZYfBQN-PwVdWEs4rnIu04JNnYGEo38tnhQya8SNbhe4aG-0sroEm9NCkqk2yxVc4l58cOkVUka"/>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas (Navigation suppressed for focused task) -->
+<main class="flex-grow w-full max-w-[800px] mx-auto px-margin-mobile md:px-gutter py-lg md:py-xl flex flex-col gap-lg">
+<!-- Progress Stepper -->
+<div class="w-full flex items-center justify-between relative px-2 mb-md">
+<div class="absolute left-0 top-1/2 -translate-y-1/2 w-full h-0.5 bg-surface-variant z-0"></div>
+<div class="absolute left-0 top-1/2 -translate-y-1/2 w-[100%] h-0.5 bg-primary z-0 transition-all"></div>
+<div class="relative z-10 flex flex-col items-center gap-xs bg-background px-2">
+<div class="w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center font-label-bold text-label-bold shadow-sm">
+<span class="material-symbols-outlined text-[16px]" data-icon="check">check</span>
+</div>
+<span class="font-label-sm text-label-sm text-secondary hidden md:block">Details</span>
+</div>
+<div class="relative z-10 flex flex-col items-center gap-xs bg-background px-2">
+<div class="w-8 h-8 rounded-full bg-primary text-on-primary flex items-center justify-center font-label-bold text-label-bold shadow-sm">
+<span class="material-symbols-outlined text-[16px]" data-icon="check">check</span>
+</div>
+<span class="font-label-sm text-label-sm text-secondary hidden md:block">AI Analysis</span>
+</div>
+<div class="relative z-10 flex flex-col items-center gap-xs bg-background px-2">
+<div class="w-8 h-8 rounded-full border-2 border-primary bg-primary-container text-on-primary-container flex items-center justify-center font-label-bold text-label-bold shadow-sm ring-4 ring-primary-fixed">
+                    3
+                </div>
+<span class="font-label-sm text-label-sm text-primary font-bold hidden md:block">Confirm</span>
+</div>
+</div>
+<!-- Header -->
+<div class="flex flex-col gap-xs text-center md:text-left">
+<h1 class="font-headline-lg text-headline-lg text-on-background">Review &amp; Confirm</h1>
+<p class="font-body-md text-body-md text-on-surface-variant">Please review the AI-extracted details before final routing.</p>
+</div>
+<!-- Bento Grid Layout for Summary Data -->
+<div class="grid grid-cols-1 md:grid-cols-12 gap-sm md:gap-md">
+<!-- Primary AI Assessment Card -->
+<div class="md:col-span-12 bg-surface-container-lowest border border-outline-variant rounded-xl p-md md:p-lg shadow-[0_4px_24px_rgba(0,0,0,0.02)] flex flex-col gap-md">
+<div class="flex items-center justify-between border-b border-surface-variant pb-sm">
+<div class="flex items-center gap-sm text-primary">
+<span class="material-symbols-outlined" data-icon="smart_toy">smart_toy</span>
+<h2 class="font-headline-md text-headline-md text-on-surface">AI Classification</h2>
+</div>
+<div class="flex items-center gap-xs bg-tertiary-container/10 text-tertiary px-sm py-xs rounded-full font-label-sm text-label-sm">
+<span class="material-symbols-outlined text-[14px]" data-icon="verified">verified</span>
+                        High Confidence
+                    </div>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-lg">
+<div class="flex flex-col gap-xs">
+<span class="font-label-bold text-label-bold text-secondary">Categorization</span>
+<div class="flex items-center gap-sm">
+<span class="material-symbols-outlined text-outline" data-icon="construction">construction</span>
+<span class="font-body-lg text-body-lg text-on-surface font-medium">Infrastructure &amp; Roads</span>
+</div>
+</div>
+<div class="flex flex-col gap-xs">
+<span class="font-label-bold text-label-bold text-secondary">Assessed Severity</span>
+<div class="flex items-center gap-sm">
+<span class="inline-flex items-center gap-1 bg-error-container text-on-error-container font-label-bold text-label-bold px-3 py-1 rounded-full">
+<span class="material-symbols-outlined text-[16px]" data-icon="warning" style="font-variation-settings: 'FILL' 1;">warning</span>
+                                High Priority
+                            </span>
+</div>
+<p class="font-label-sm text-label-sm text-on-surface-variant mt-1">Hazardous pothole in active traffic lane.</p>
+</div>
+</div>
+</div>
+<!-- Location Card -->
+<div class="md:col-span-7 bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-[0_4px_24px_rgba(0,0,0,0.02)] flex flex-col">
+<div class="h-40 w-full relative bg-surface-variant">
+<img alt="Map view of location" class="w-full h-full object-cover" data-alt="Top-down satellite map view of a modern urban intersection with clear roads, mild traffic, and a red location pin highlighting a specific coordinate." data-location="Doha" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAdrcnJRnb7cznk9gpZVoFujB2NLo2mtw_rDqoi2GTBtj238OnlOzNilJhLiMx730gs9lp6b0hF0AxkfKjAzMrZDEo_9yAOD8rTIdAdnZwkLzQgtR2bCF_Pmf7fiM4QzpfPi9MFVd7jrzuFsdmVIPyEz1kZveglCGYJd2DfLVnF4ozfNJc1EijVqXlnM_nnwVIzSRfcbutIE5XaKHyBkSwkQQUlulU2qz_ZzU2n0SJBfJbDxeLg4uEYBFlQlwBXvitvMRk7qot_6W4k"/>
+<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-primary drop-shadow-md">
+<span class="material-symbols-outlined text-4xl" data-icon="location_on" style="font-variation-settings: 'FILL' 1;">location_on</span>
+</div>
+</div>
+<div class="p-md flex flex-col gap-sm">
+<div class="flex items-center justify-between">
+<span class="font-label-bold text-label-bold text-secondary">Location Detail</span>
+<button class="text-primary font-label-sm text-label-sm hover:underline">Adjust Pin</button>
+</div>
+<p class="font-body-md text-body-md text-on-surface">Al Corniche Street, near Museum of Islamic Art intersection, Doha.</p>
+<span class="font-label-sm text-label-sm text-on-surface-variant font-mono">25.2916° N, 51.5367° E</span>
+</div>
+</div>
+<!-- Original Input Snippet -->
+<div class="md:col-span-5 bg-surface-container-lowest border border-outline-variant rounded-xl p-md shadow-[0_4px_24px_rgba(0,0,0,0.02)] flex flex-col gap-sm">
+<span class="font-label-bold text-label-bold text-secondary">Your Submission</span>
+<div class="flex gap-md mt-sm">
+<div class="w-20 h-20 rounded-lg overflow-hidden shrink-0 border border-outline-variant">
+<img alt="Reported issue photo" class="w-full h-full object-cover" data-alt="Close up view of a deep, jagged pothole in cracked dark asphalt road surface during daylight, showing loose gravel." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCUQc3JGyZAyAsKnGj3n1v0uCH6ztudBxhPZHKVb375uFdh_gymv3ywUGu0ivgTZtJgpu6xEHaetRXZp0PKn4I_S5CzGNhI73BZRWg8aNo0Hf2HGMn9QIXy176ZK2hoxYxjH4eZVsehkLQ-DSDDbRw7ehTgH4DvNwlY0OTvARkJVSKtn3UGJfi1We3JCqHHJR2VYUMmCAa6jhFpyjmg4DlvqsnDA1qd42PZbA4wNboWU_e9_yFQFStbnEeZCvDEj_wNQ7I_cdVqIaEn"/>
+</div>
+<div class="flex flex-col justify-center">
+<p class="font-body-md text-body-md text-on-surface line-clamp-3">"Large pothole formed after yesterday's rain. Cars are swerving to avoid it. It's in the middle lane."</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Action Area -->
+<div class="flex flex-col md:flex-row-reverse gap-sm md:gap-md mt-sm pt-lg border-t border-outline-variant">
+<button class="w-full md:w-auto bg-primary text-on-primary px-xl py-3 rounded-full font-label-bold text-label-bold hover:bg-primary-container hover:text-on-primary-container transition-colors duration-200 flex items-center justify-center gap-sm shadow-sm active:scale-[0.98]">
+<span>Submit &amp; Route</span>
+<span class="material-symbols-outlined text-[20px]" data-icon="send">send</span>
+</button>
+<button class="w-full md:w-auto bg-transparent border border-outline text-primary px-xl py-3 rounded-full font-label-bold text-label-bold hover:bg-surface-variant transition-colors duration-200 flex items-center justify-center active:scale-[0.98]">
+                Edit Details
+            </button>
+</div>
+</main>
+</body></html>
