@@ -4,16 +4,21 @@ import { getTickets } from './api';
 
 const AppContext = createContext(null);
 
-const LS_KEY = 'baladiya.app.v2';
+const LS_KEY = 'baladiya.app.v3';
 
 function readPersisted() {
   try {
     const raw = localStorage.getItem(LS_KEY);
-    if (!raw) return { email: '', token: '' };
+    if (!raw) return { email: '', token: '', role: '', department: '' };
     const saved = JSON.parse(raw);
-    return { email: saved.email || '', token: saved.token || '' };
+    return {
+      email: saved.email || '',
+      token: saved.token || '',
+      role: saved.role || '',
+      department: saved.department || '',
+    };
   } catch {
-    return { email: '', token: '' };
+    return { email: '', token: '', role: '', department: '' };
   }
 }
 
@@ -21,6 +26,8 @@ export function AppProvider({ children }) {
   const initial = readPersisted();
   const [email, setEmail] = useState(initial.email);
   const [token, setToken] = useState(initial.token);
+  const [role, setRole] = useState(initial.role);
+  const [department, setDepartment] = useState(initial.department);
   const [tickets, setTickets] = useState([]);
   const [ticketsLoading, setTicketsLoading] = useState(false);
   const [ticketsError, setTicketsError] = useState('');
@@ -35,8 +42,8 @@ export function AppProvider({ children }) {
   });
 
   useEffect(() => {
-    localStorage.setItem(LS_KEY, JSON.stringify({ email, token }));
-  }, [email, token]);
+    localStorage.setItem(LS_KEY, JSON.stringify({ email, token, role, department }));
+  }, [email, token, role, department]);
 
   const refreshTickets = useCallback(() => {
     if (!token) return Promise.resolve();
@@ -47,16 +54,13 @@ export function AppProvider({ children }) {
       .catch((err) => {
         setTicketsError(err.message || 'Could not load tickets.');
         if (err.status === 401) {
-          setEmail('');
-          setToken('');
+          setEmail(''); setToken(''); setRole(''); setDepartment('');
           setTickets([]);
         }
       })
       .finally(() => setTicketsLoading(false));
   }, [token]);
 
-  // Fetch tickets whenever the token changes. State mutations live in promise
-  // callbacks (not the effect body), so the cascading-render lint is satisfied.
   useEffect(() => {
     if (!token) return;
     let cancelled = false;
@@ -70,8 +74,7 @@ export function AppProvider({ children }) {
         if (cancelled) return;
         setTicketsError(err.message || 'Could not load tickets.');
         if (err.status === 401) {
-          setEmail('');
-          setToken('');
+          setEmail(''); setToken(''); setRole(''); setDepartment('');
           setTickets([]);
         }
       })
@@ -93,23 +96,31 @@ export function AppProvider({ children }) {
     });
   }
 
-  function signIn({ email: e, token: tk }) {
+  function signIn({ email: e, token: tk, role: r, department: d }) {
     setEmail(e);
     setToken(tk);
+    setRole(r || 'citizen');
+    setDepartment(d || '');
   }
 
   function signOut() {
     setEmail('');
     setToken('');
+    setRole('');
+    setDepartment('');
     setTickets([]);
     resetReport();
     localStorage.removeItem(LS_KEY);
   }
 
+  const isAdmin = role === 'admin' || role === 'super_admin';
+  const isSuperAdmin = role === 'super_admin';
+
   return (
     <AppContext.Provider
       value={{
-        email, token, signIn, signOut,
+        email, token, role, department, isAdmin, isSuperAdmin,
+        signIn, signOut,
         tickets, ticketsLoading, ticketsError, refreshTickets, addTicket,
         report, setReport, resetReport,
       }}

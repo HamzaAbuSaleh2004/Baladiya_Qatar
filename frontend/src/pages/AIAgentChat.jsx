@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../AppContext';
 import { sendMessage } from '../api';
@@ -15,6 +15,7 @@ export default function AIAgentChat() {
   const [error, setError] = useState('');
   const [keyboardInset, setKeyboardInset] = useState(0);
   const scrollRef = useRef(null);
+  const endRef = useRef(null);
   const composerRef = useRef(null);
   const [conversationStart] = useState(() => timeLabel());
 
@@ -22,9 +23,24 @@ export default function AIAgentChat() {
     if (!report.sessionId) navigate('/capture', { replace: true });
   }, [report.sessionId, navigate]);
 
-  useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
-  }, [report.messages, sending]);
+  // Auto-scroll: run after layout (so the new message is measured) and again
+  // on the next frame to catch any late image/font reflow. Triggered by every
+  // change to message count, sending state, or the keyboard inset (mobile).
+  useLayoutEffect(() => {
+    const scrollToBottom = (smooth) => {
+      const c = scrollRef.current;
+      if (!c) return;
+      c.scrollTo({ top: c.scrollHeight, behavior: smooth ? 'smooth' : 'auto' });
+      endRef.current?.scrollIntoView({ block: 'end', behavior: smooth ? 'smooth' : 'auto' });
+    };
+    scrollToBottom(true);
+    const r1 = requestAnimationFrame(() => scrollToBottom(true));
+    const r2 = setTimeout(() => scrollToBottom(false), 220);
+    return () => {
+      cancelAnimationFrame(r1);
+      clearTimeout(r2);
+    };
+  }, [report.messages.length, sending, keyboardInset]);
 
   // Keep the composer above the on-screen keyboard on iOS Safari.
   useEffect(() => {
@@ -169,6 +185,8 @@ export default function AIAgentChat() {
               </div>
             </div>
           )}
+
+          <div ref={endRef} aria-hidden className="h-px w-full" />
         </div>
       </main>
 

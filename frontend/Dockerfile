@@ -4,7 +4,9 @@ COPY package.json package-lock.json ./
 RUN npm ci --no-audit --no-fund
 COPY . .
 ARG VITE_API_URL
+ARG VITE_GMAPS_API_KEY
 ENV VITE_API_URL=${VITE_API_URL}
+ENV VITE_GMAPS_API_KEY=${VITE_GMAPS_API_KEY}
 RUN npm run build
 
 FROM nginx:1.27-alpine

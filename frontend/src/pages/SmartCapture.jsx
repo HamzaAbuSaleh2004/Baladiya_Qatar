@@ -1,30 +1,49 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../AppContext';
-import { startReport } from '../api';
-
-const STAGES = [
-  { key: 'analyzing', label: 'Analyzing image…' },
-  { key: 'identifying', label: 'Identifying object…' },
-  { key: 'drafting', label: 'Drafting report…' },
-];
+import { checkDuplicates, startReport } from '../api';
+import { useI18n } from '../i18n';
+import { resizeImage } from '../imageResize';
+import { reverseGeocode } from '../maps';
 
 const MAX_IMAGE_BYTES = 10 * 1024 * 1024; // 10 MB
 
+const CATEGORY_LABEL = {
+  pothole: 'Pothole / Road Damage',
+  falling_tree: 'Tree Hazard',
+};
+
 export default function SmartCapture() {
   const navigate = useNavigate();
-  const { token, report, setReport, resetReport } = useApp();
+  const { token, setReport, resetReport } = useApp();
+  const { t, lang } = useI18n();
   const fileInputRef = useRef(null);
   const cameraInputRef = useRef(null);
 
-  const [imagePreview, setImagePreview] = useState(report.imagePreview);
-  const [imageFile, setImageFile] = useState(report.image);
-  const [gps, setGps] = useState(report.gps);
+  // Bug #4 fix: Always start fresh — the in-context Report state is reset on
+  // mount, so a previous submitted ticket can never leak its image here.
+  const [imagePreview, setImagePreview] = useState(null);
+  const [imageFile, setImageFile] = useState(null);
+  const [gps, setGps] = useState(null);
+  const [address, setAddress] = useState('');
   const [gpsError, setGpsError] = useState('');
   const [gpsBusy, setGpsBusy] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [stageIdx, setStageIdx] = useState(0);
   const [error, setError] = useState('');
+  const [duplicates, setDuplicates] = useState(null);
+
+  const STAGES = [
+    { key: 'analyzing',   label: t('analyzing') },
+    { key: 'identifying', label: t('identifying') },
+    { key: 'drafting',    label: t('drafting') },
+  ];
+
+  // Reset persisted report on mount so we never re-show last submission's image.
+  useEffect(() => {
+    resetReport();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const requestGps = useCallback(() => {
     if (!('geolocation' in navigator)) {
@@ -64,15 +83,26 @@ export default function SmartCapture() {
     return () => { cancelled = true; };
   }, [gps]);
 
+  // Reverse-geocode whenever GPS becomes available.
+  useEffect(() => {
+    if (!gps) return;
+    let cancelled = false;
+    reverseGeocode(gps.latitude, gps.longitude).then((s) => {
+      if (cancelled) return;
+      if (s) setAddress(s);
+    });
+    return () => { cancelled = true; };
+  }, [gps]);
+
   useEffect(() => {
     if (!submitting) return;
     const timer = setInterval(() => setStageIdx((i) => Math.min(i + 1, STAGES.length - 1)), 900);
     return () => clearInterval(timer);
-  }, [submitting]);
+  }, [submitting, STAGES.length]);
 
   function onFilePicked(e) {
     const f = e.target.files?.[0];
-    e.target.value = ''; // allow re-picking the same file
+    e.target.value = '';
     if (!f) return;
     if (f.size > MAX_IMAGE_BYTES) {
       setError('Image is too large (max 10 MB). Try a smaller photo.');
@@ -91,26 +121,28 @@ export default function SmartCapture() {
     setImagePreview(null);
   }
 
-  async function onSubmit() {
-    if (!imageFile) { setError('Please capture or upload a photo.'); return; }
-    if (!gps) { setError('Location is required. Allow location access and retry.'); return; }
+  async function runStartReport() {
     setError('');
     setStageIdx(0);
     setSubmitting(true);
     try {
+      const resized = await resizeImage(imageFile).catch(() => imageFile);
       const res = await startReport({
         token,
         latitude: gps.latitude,
         longitude: gps.longitude,
-        image: imageFile,
+        image: resized,
+        address,
+        uiLanguage: lang,
       });
       setReport({
         sessionId: res.session_id,
-        image: imageFile,
+        image: resized,
         imagePreview,
         gps,
+        address,
         messages: [
-          { role: 'user', text: 'I want to report this issue.', image: imagePreview },
+          { role: 'user',  text: t('reportNewIssue'), image: imagePreview },
           { role: 'agent', text: res.reply },
         ],
         ticket: res.ticket || null,
@@ -123,13 +155,55 @@ export default function SmartCapture() {
     }
   }
 
+  async function onSubmit() {
+    if (!imageFile) { setError(t('pickPhotoFirst')); return; }
+    if (!gps)       { setError(t('locationRequired')); return; }
+    setError('');
+
+    try {
+      const resizedForCheck = await resizeImage(imageFile).catch(() => imageFile);
+      const dup = await checkDuplicates({
+        token,
+        latitude: gps.latitude,
+        longitude: gps.longitude,
+        image: resizedForCheck,
+      });
+      if (dup?.duplicates && dup.duplicates.length > 0) {
+        setDuplicates({ items: dup.duplicates });
+        return;
+      }
+    } catch {
+      // Non-fatal — proceed.
+    }
+
+    runStartReport();
+  }
+
+  function continueDespiteDuplicate() {
+    setDuplicates(null);
+    runStartReport();
+  }
+
+  function cancelDuplicate() {
+    setDuplicates(null);
+    navigate('/');
+  }
+
   function onCancel() {
+    discardPhoto();
     resetReport();
     navigate('/');
   }
 
   return (
-    <div className="bg-background min-h-screen flex flex-col font-body-md text-body-md text-on-surface antialiased">
+    <div
+      className="min-h-screen flex flex-col font-body-md text-body-md text-on-surface antialiased"
+      style={{
+        background:
+          'radial-gradient(800px 400px at 50% -10%, #f8e9ef 0%, transparent 60%),' +
+          'linear-gradient(180deg, #fffafb 0%, #fff7f8 100%)',
+      }}
+    >
       <header className="flex items-center justify-between px-margin-mobile h-16 w-full z-10 bg-surface-bright/80 backdrop-blur-md sticky top-0 border-b border-outline-variant/40">
         <button
           onClick={onCancel}
@@ -139,18 +213,16 @@ export default function SmartCapture() {
           <span className="material-symbols-outlined">close</span>
         </button>
         <div className="flex flex-col items-center">
-          <span className="font-label-bold text-label-bold text-on-surface">Smart Report</span>
-          <span className="font-label-sm text-label-sm text-on-surface-variant">Step 1 of 2</span>
+          <span className="font-label-bold text-label-bold text-on-surface">{t('smartReport')}</span>
+          <span className="font-label-sm text-label-sm text-on-surface-variant">{t('step1of2')}</span>
         </div>
         <div className="w-11" />
       </header>
 
       <main className="flex-1 flex flex-col px-margin-mobile pb-gutter max-w-container-max mx-auto w-full relative">
         <div className="mt-xs mb-gutter text-center">
-          <h1 className="font-headline-md text-headline-md text-on-surface mb-xs">Capture the Issue</h1>
-          <p className="font-body-md text-body-md text-on-surface-variant max-w-md mx-auto">
-            Take a clear photo. Our AI will categorize it and ask one quick clarifying question.
-          </p>
+          <h1 className="font-headline-md text-headline-md text-on-surface mb-xs">{t('captureTheIssue')}</h1>
+          <p className="font-body-md text-on-surface-variant max-w-md mx-auto">{t('captureSubtitle')}</p>
         </div>
 
         <div className="flex-1 relative rounded-3xl overflow-hidden bg-surface-container-highest shadow-[0_4px_24px_rgba(0,0,0,0.08)] flex flex-col min-h-[280px]">
@@ -160,7 +232,7 @@ export default function SmartCapture() {
             <div className="absolute inset-0 flex flex-col items-center justify-center text-on-surface-variant px-md">
               <span className="material-symbols-outlined text-6xl opacity-70 mb-md">photo_camera</span>
               <p className="font-body-md text-body-md max-w-[16rem] text-center">
-                Tap the camera button to take a photo, or upload from your gallery.
+                {t('captureSubtitle')}
               </p>
             </div>
           )}
@@ -170,23 +242,23 @@ export default function SmartCapture() {
               type="button"
               onClick={requestGps}
               disabled={gpsBusy}
-              className="bg-inverse-surface/80 backdrop-blur-md text-inverse-on-surface text-label-sm font-label-sm px-3 py-1.5 rounded-full flex items-center gap-1 max-w-[70%] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-              title={gpsError ? 'Tap to retry location' : (gps ? 'Location' : 'Locating')}
-              aria-label={gpsError ? 'Retry location' : 'Location status'}
+              className="bg-inverse-surface/80 backdrop-blur-md text-inverse-on-surface text-label-sm font-label-sm px-3 py-1.5 rounded-full flex items-center gap-1 max-w-[80%] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              title={gpsError ? t('retryLocation') : (gps ? 'Location' : t('locating'))}
+              aria-label={gpsError ? t('retryLocation') : 'Location status'}
             >
               <span className="material-symbols-outlined text-[16px]">
                 {gpsBusy ? 'progress_activity' : 'location_on'}
               </span>
-              {gps ? (
-                <span className="truncate">
-                  {gps.latitude.toFixed(4)}, {gps.longitude.toFixed(4)}
-                </span>
+              {address ? (
+                <span className="truncate">{address}</span>
+              ) : gps ? (
+                <span className="truncate">{gps.latitude.toFixed(4)}, {gps.longitude.toFixed(4)}</span>
               ) : gpsBusy ? (
-                <span className="truncate">Locating…</span>
+                <span className="truncate">{t('locating')}</span>
               ) : gpsError ? (
-                <span className="truncate">Retry location</span>
+                <span className="truncate">{t('retryLocation')}</span>
               ) : (
-                <span className="truncate">Locating…</span>
+                <span className="truncate">{t('locating')}</span>
               )}
             </button>
             {imagePreview && (
@@ -209,7 +281,7 @@ export default function SmartCapture() {
                 <span className="material-symbols-outlined text-4xl text-inverse-on-surface icon-fill">smart_toy</span>
               </div>
               <h2 className="font-headline-md text-headline-md text-inverse-on-surface mb-md text-center">
-                AI Analysis in Progress
+                {t('aiAnalysisInProgress')}
               </h2>
               <div className="flex flex-col gap-sm w-full max-w-xs">
                 {STAGES.map((s, i) => (
@@ -218,11 +290,9 @@ export default function SmartCapture() {
                       i < stageIdx ? 'bg-primary text-on-primary' :
                       i === stageIdx ? 'border-2 border-primary' : 'border-2 border-inverse-on-surface/30'
                     }`}>
-                      {i < stageIdx && (
-                        <span className="material-symbols-outlined text-[14px] font-bold">check</span>
-                      )}
+                      {i < stageIdx && (<span className="material-symbols-outlined text-[14px] font-bold">check</span>)}
                     </div>
-                    <span className="font-body-md text-body-md text-inverse-on-surface">{s.label}</span>
+                    <span className="font-body-md text-inverse-on-surface">{s.label}</span>
                   </div>
                 ))}
               </div>
@@ -245,7 +315,7 @@ export default function SmartCapture() {
             <div className="w-12 h-12 rounded-full bg-surface-container flex items-center justify-center text-on-surface-variant group-hover:bg-surface-container-high group-focus-visible:ring-2 group-focus-visible:ring-primary transition-colors">
               <span className="material-symbols-outlined">photo_library</span>
             </div>
-            <span className="font-label-sm text-label-sm text-on-surface-variant">Upload</span>
+            <span className="font-label-sm text-label-sm text-on-surface-variant">{t('upload')}</span>
           </button>
 
           {imagePreview ? (
@@ -255,7 +325,7 @@ export default function SmartCapture() {
               className="bg-primary text-on-primary rounded-full px-8 py-4 flex items-center gap-2 shadow-[0_4px_10px_rgba(108,0,40,0.3)] active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary"
             >
               <span className="material-symbols-outlined">send</span>
-              <span className="font-label-bold text-label-bold">Analyze Issue</span>
+              <span className="font-label-bold text-label-bold">{t('analyzeIssue')}</span>
             </button>
           ) : (
             <button
@@ -273,22 +343,67 @@ export default function SmartCapture() {
           <div className="w-12" />
         </div>
 
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={onFilePicked}
-        />
-        <input
-          ref={cameraInputRef}
-          type="file"
-          accept="image/*"
-          capture="environment"
-          className="hidden"
-          onChange={onFilePicked}
-        />
+        <input ref={fileInputRef}   type="file" accept="image/*" className="hidden" onChange={onFilePicked} />
+        <input ref={cameraInputRef} type="file" accept="image/*" capture="environment" className="hidden" onChange={onFilePicked} />
       </main>
+
+      {duplicates && (
+        <DuplicateModal items={duplicates.items} onContinue={continueDespiteDuplicate} onCancel={cancelDuplicate} />
+      )}
+    </div>
+  );
+}
+
+function DuplicateModal({ items, onContinue, onCancel }) {
+  const { t } = useI18n();
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/40 backdrop-blur-sm p-4" role="dialog" aria-modal="true">
+      <div className="bg-surface-container-lowest rounded-2xl shadow-2xl w-full max-w-md p-lg flex flex-col gap-md">
+        <div className="flex items-start gap-md">
+          <div className="w-10 h-10 rounded-full bg-tertiary-fixed text-on-tertiary-fixed flex items-center justify-center shrink-0">
+            <span className="material-symbols-outlined">help</span>
+          </div>
+          <div>
+            <h3 className="text-headline-md font-headline-md text-on-surface">{t('possibleDuplicate')}</h3>
+            <p className="font-body-md text-on-surface-variant mt-1">{t('possibleDuplicateBody', items.length)}</p>
+          </div>
+        </div>
+        <ul className="flex flex-col gap-xs max-h-60 overflow-y-auto">
+          {items.map((tk) => (
+            <li key={tk.ticket_id} className="bg-surface-container rounded-lg p-sm">
+              <div className="flex justify-between items-start gap-sm">
+                <div className="min-w-0">
+                  <div className="font-label-bold text-label-bold text-on-surface">#{tk.ticket_id}</div>
+                  <div className="font-label-sm text-label-sm text-on-surface-variant">
+                    {CATEGORY_LABEL[tk.category] || tk.category} · {(tk.status || '').replace('_', ' ')}
+                    {tk.distance_m != null ? ` · ~${Math.round(tk.distance_m)} m` : ''}
+                  </div>
+                </div>
+                {tk.location?.latitude != null && (
+                  <a
+                    className="text-primary text-label-sm font-label-bold hover:underline shrink-0"
+                    href={`https://www.google.com/maps?q=${tk.location.latitude},${tk.location.longitude}`}
+                    target="_blank" rel="noopener noreferrer"
+                  >
+                    Map
+                  </a>
+                )}
+              </div>
+              {tk.description && (
+                <p dir="auto" className="font-body-md text-on-surface mt-1 line-clamp-2">{tk.description}</p>
+              )}
+            </li>
+          ))}
+        </ul>
+        <div className="flex flex-col sm:flex-row-reverse gap-sm">
+          <button type="button" onClick={onContinue} className="bg-primary text-on-primary px-lg py-3 rounded-full font-label-bold">
+            {t('continueReport')}
+          </button>
+          <button type="button" onClick={onCancel} className="border border-outline text-on-surface px-lg py-3 rounded-full font-label-bold">
+            {t('sameIssueCancel')}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

@@ -44,8 +44,14 @@ export default function Authentication() {
     setError('');
     try {
       const res = isSignup ? await signup(em, password) : await login(em, password);
-      signIn({ email: res.email, token: res.token });
-      navigate('/', { replace: true });
+      signIn({
+        email: res.email,
+        token: res.token,
+        role: res.role,
+        department: res.department,
+      });
+      const dest = (res.role === 'admin' || res.role === 'super_admin') ? '/admin' : '/';
+      navigate(dest, { replace: true });
     } catch (err) {
       setError(err.message || 'Could not authenticate. Please try again.');
     } finally {

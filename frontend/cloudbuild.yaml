@@ -3,6 +3,7 @@ steps:
     args:
       - build
       - --build-arg=VITE_API_URL=${_VITE_API_URL}
+      - --build-arg=VITE_GMAPS_API_KEY=${_VITE_GMAPS_API_KEY}
       - -t
       - us-central1-docker.pkg.dev/looker-vertexai-training/baladiya/frontend:v1
       - .
@@ -12,3 +13,4 @@ options:
   logging: CLOUD_LOGGING_ONLY
 substitutions:
   _VITE_API_URL: "https://baladiya-agent-734635782885.us-central1.run.app"
+  _VITE_GMAPS_API_KEY: ""
